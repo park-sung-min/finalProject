@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org/DTD Config 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<properties resource="db.properties" />
+	<typeAliases>
+		<typeAlias type="com.psm.finalProject.domain.MemberDTO" alias="Member"/>
+		<typeAlias type="com.psm.finalProject.domain.ProductDTO" alias="Product"/>
+		<typeAlias type="com.psm.finalProject.domain.CartDTO" alias="Cart"/>
+		<typeAlias type="com.psm.finalProject.domain.OrdersDTO" alias="Orders"/>
+		<typeAlias type="com.psm.finalProject.domain.OrdersDetailDTO" alias="OrdersDetail"/>
+		<typeAlias type="com.psm.finalProject.domain.NoticeDTO" alias="Notice"/>
+		<typeAlias type="com.psm.finalProject.domain.CouponDTO" alias="Coupon"/>
+		<typeAlias type="com.psm.finalProject.domain.EventDTO" alias="Event"/>
+		<typeAlias type="com.psm.finalProject.domain.RefundDTO" alias="Refund"/>
+		<typeAlias type="com.psm.finalProject.domain.WishlistDTO" alias="Wishlist"/>
+		<typeAlias type="com.psm.finalProject.domain.ReviewDTO" alias="Review"/>
+		<typeAlias type="com.psm.finalProject.domain.UcouponDTO" alias="Ucoupon"/>
+	</typeAliases>
+	<environments default="development">
+		<environment id="development">
+			<transactionManager type="JDBC" />
+			<dataSource type="POOLED">
+				<property name="driver" value="${driver}"/>
+				<property name="url" value="${url}"/>
+				<property name="username" value="${username}"/>
+				<property name="password" value="${password}"/>
+			</dataSource>
+		</environment>
+	</environments>
+	<mappers>
+		<mapper resource="com/psm/finalProject/mapper/MemberMapper.xml"/>
+		<mapper resource="com/psm/finalProject/mapper/ProductMapper.xml"/>
+		<mapper resource="com/psm/finalProject/mapper/MypageMapper.xml"/>
+		<mapper resource="com/psm/finalProject/mapper/OrderMapper.xml"/>
+		<mapper resource="com/psm/finalProject/mapper/BoardMapper.xml"/>
+	</mappers>
+</configuration>

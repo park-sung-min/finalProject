@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org/DTD Config 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="orderMapper">
+	  
+		<!-- 장바구니 / 주문 -->
+		<resultMap id="CartList" type="Cart">
+			<id property="cartNo" column="cart_no" />
+			<result property="id" column="id" />
+			<result property="productNo" column="product_no" />
+			<result property="cartQty" column="cart_qty" />
+			
+		<association property="product" javaType="Product">
+			<id property="productNo" column="product_no" />
+			<result property="productName" column="product_name" />
+			<result property="productImage" column="product_image" />
+			<result property="productPrice" column="product_price" />
+		</association>
+		
+		<association property="member" javaType="Member"> 
+			<id property="id" column="id" />
+			<result property="name" column="name" />
+			<result property="email" column="email" />
+			<result property="tel" column="tel" />
+			<result property="address" column="address" />
+			<result property="point" column="point" />
+		</association>
+	</resultMap>
+	
+	<!-- 쿠폰 -->
+	<resultMap id="CouponList" type="Coupon">
+			<id property="couponNo" column="coupon_no" />
+			<result property="couponTitle" column="coupon_title" />
+			<result property="couponDiscount" column="coupon_discount" />
+			<result property="couponSdate" column="coupon_sdate" />
+			<result property="couponEdate" column="coupon_edate" />
+			
+		<association property="ucoupon" javaType="Ucoupon">
+			<id property="ucouponNo" column="ucoupon_no" />
+			<result property="id" column="id" />
+			<result property="couponUsed" column="ucoupon_used" />
+			<result property="couponNo" column="coupon_no" />
+		</association>
+		
+		<association property="member" javaType="Member"> 
+			<id property="id" column="id" />
+		</association>
+	</resultMap>
+	
+
+	<!-- 장바구니에 추가하기 담기를 누를때 상품번호/id 있으면 update 없으면 insert -->
+	<insert id="cartInsert" >
+		MERGE INTO CART
+		USING DUAL
+		ON
+		(product_no = #{productNo}
+		AND id = #{id})
+
+		WHEN MATCHED THEN
+		UPDATE
+		SET cart_qty = cart_qty +
+		#{cartQty}
+		WHERE
+		product_no = #{productNo}
+		AND id = #{id}
+		WHEN NOT MATCHED
+		THEN
+		INSERT
+		(cart_no, id, product_no, cart_qty)
+		VALUES(cartseq.NEXTVAL,
+		#{id},
+		#{productNo}, #{cartQty})
+	</insert>
+
+
+	<!-- 장바구니 목록보기 -->
+	<select id="cartList" resultMap="CartList">
+		SELECT
+		c.cart_no ,
+		c.id ,
+		p.product_no ,
+		m.name ,
+		m.email,
+		m.tel,
+		m.address,
+		m.point,
+		p.product_name ,
+		p.product_image ,
+		c.cart_qty ,
+		p.product_price 
+		FROM
+		member m, product p, cart c
+		WHERE
+		m.id = c.id AND
+		p.product_no = c.product_no AND
+		c.id = #{id}
+	</select>
+
+	<!-- 장바구니 개별 삭제 -->
+	<delete id="cartDelete">
+		DELETE FROM cart
+		WHERE cart_no = #{cartNo}
+	</delete>
+
+	<!-- 쿠폰목록 확인하기 -->
+	<select id="couponList" resultMap="CouponList">
+		SELECT
+		c.coupon_no,
+		c.coupon_title,
+		c.coupon_discount,
+		c.coupon_sdate,
+		c.coupon_edate,
+		u.id
+		FROM coupon c, ucoupon u
+		WHERE u.id = #{id} AND 
+		c.coupon_no = u.coupon_no AND 
+		u.ucoupon_used = 0 AND 
+		sysdate between coupon_sdate and coupon_edate
+		ORDER BY coupon_edate desc
+	</select>
+
+	<!-- 1. orders 테이블에 추가 (orders) -->
+	<insert id="ordersInsert" >
+		INSERT INTO orders
+		VALUES (
+			orderseq.NEXTVAL,
+			#{id},
+			sysdate, 
+			'주문완료',
+			#{ordersTotal},
+			#{discountCoupon},
+			#{discountPoint}
+		)
+	</insert>
+	
+	<!-- orderNo 구하기 -->
+	<select id="maxOrdersNo" resultType="int">
+      SELECT max(orders_no) FROM orders
+   </select>
+	
+	<!-- 장바구니 목록보기 -->
+	<select id="getCartItem" resultType="Cart">
+		Select product_no AS productNo , cart_qty AS cartQty 
+		FROM cart 
+		where id = #{id}
+	</select>
+	
+	
+	<!-- 2. orders_detail 추가 (orders_detail) -->
+	<insert id="ordersDetailInsert" parameterType="Hashmap">
+		INSERT INTO orders_detail
+		VALUES (#{ordersNo}, #{productNo}, #{detailQty}, 0, 0)
+	</insert>
+
+	<!-- 2.2.재고수량 차감 (product) -->
+	<update id="reduceStock" parameterType="Hashmap">
+		UPDATE product
+		SET product_stock = product_stock - #{detailQty}
+		WHERE product_no = #{productNo}
+	</update>
+	
+	<!-- 3. 적립금 1% 추가 (member) -->
+	<update id="pointUpdate" parameterType="Orders">
+		UPDATE member 
+		SET point = point + (#{ordersTotal} * 0.01)
+		WHERE id = #{id}
+	</update>
+	
+	<!-- 4. 쿠폰,적립금 사용에따라 (ucoupon or member) -->
+	<!-- 4.1 적립금 : 적립금 차감 -->
+	<update id="pointUse" parameterType="Orders">
+		UPDATE member 
+		SET point = point - #{discountPoint}
+		WHERE id = #{id}
+	</update>
+
+	<!-- 4.2 쿠폰 : 쿠폰 사용처리 -->
+	<update id="couponUse" parameterType="Orders">
+		UPDATE ucoupon
+		SET ucoupon_used = 1
+		WHERE id = #{id} AND coupon_no = #{couponNo}
+	</update>
+
+
+	<!--5. cart 비우기 (cart)-->
+	<delete id="cartDeleteAll" parameterType="String">
+		DELETE FROM cart
+		WHERE id = #{id}
+	</delete>
+
+	<update id="updateReviewCheck" parameterType="Review">
+		update
+		orders_detail set REVIEW_CHECK = 1 WHERE orders_no = #{ordersNo} AND
+		product_no = #{productNo}
+	</update>
+
+	<!-- 주문취소 check -->
+	<select id="checkCancel" parameterType="int">
+	UPDATE orders	
+   		SET
+    orders_status = '주문취소'
+    	WHERE
+    orders_no = #{ordersNo}
+	</select>
+	
+   <!-- refund테이블에 데이터 추가(반품) -->
+   <select id="makeRefundTable" parameterType="Refund">
+   INSERT INTO REFUND(orders_no,product_no,id,refund_qty,refund_date,refund_status,refund_reason)
+	VALUES(#{ordersNo},#{productNo},#{id},#{refundQty},sysdate,#{refundStatus},#{refundReason})
+   </select>	
+   
+	<!-- 반품 check -->
+	<select id="checkRefund" parameterType="int">
+	UPDATE orders_detail	
+   		SET
+    detail_refund = 1
+    	WHERE
+    orders_no = #{ordersNo}
+	</select>
+
+	<!-- ADMIN -->
+	<select id="countOrder" resultType="int">
+		SELECT count(*) from orders
+	</select>
+
+	<select id="countCancel" resultType="int">
+		SELECT count(*) from orders
+		WHERE ORDERS_STATUS = '주문취소'
+	</select>
+
+	<select id="getFullInfo" resultType="Orders">
+		SELECT orders_no AS
+		ordersNo, id, orders_date AS ordersDate,
+		orders_status AS ordersStatus, orders_total AS ordersTotal
+		FROM (
+		SELECT ROWNUM RN, A.*
+		FROM (
+		SELECT *
+		FROM orders
+		ORDER BY orders_no DESC) A
+		)
+		WHERE RN BETWEEN #{start} AND #{end}
+	</select>
+
+	<select id="getOrderInfo" resultType="Orders">
+		SELECT orders_no AS
+		ordersNo, orders_date AS ordersDate, orders_status AS ordersStatus,
+		orders_total AS ordersTotal FROM orders WHERE orders_no = #{orderNo}
+	</select>
+
+	<update id="changeStatus" parameterType="Hashmap">
+		<if test="status == '주문완료'">
+			UPDATE orders SET orders_status = '배송중' WHERE orders_no =
+			#{orderNo}
+		</if>
+		<if test="status == '배송중'">
+			UPDATE orders SET orders_status = '배송완료' WHERE orders_no =
+			#{orderNo}
+		</if>
+	</update>
+
+	<select id="getCancelInfo" resultType="Orders">
+		SELECT orders_no AS
+		ordersNo, id, orders_date AS ordersDate,
+		orders_status AS ordersStatus, orders_total AS ordersTotal
+		FROM (
+		SELECT ROWNUM RN, A.*
+		FROM (
+		SELECT *
+		FROM orders
+		WHERE orders_status = '주문취소'
+		ORDER BY orders_no DESC) A
+		)
+		WHERE RN BETWEEN #{start} AND #{end}
+	</select>
+	<select id="memberOrderlist" parameterType="String"
+		resultType="Orders">
+		SELECT orders_no AS ordersNo, orders_date AS ordersDate,
+		orders_status AS ordersStatus, orders_total AS ordersTotal
+		FROM orders WHERE id = #{id}
+	</select>
+
+	<select id="memberSum" resultType="int">
+		SELECT NVL(SUM(orders_total),
+		0) FROM orders WHERE id = #{id}
+	</select>
+	<select id="memberLastest" resultType="Date">
+		SELECT MAX(orders_date)
+		FROM orders WHERE id = #{id}
+	</select>
+
+	<select id="countRefund" resultType="int">
+		SELECT count(*) from refund
+	</select>
+
+	<select id="getRefundInfo" resultType="Refund">
+		SELECT orders_no AS
+		ordersNo, product_no AS productNo, id, refund_qty AS refundQty,
+		refund_date AS refundDate, refund_status AS refundStatus,
+		refund_reason AS refundReason
+		FROM (
+		SELECT ROWNUM RN, A.*
+		FROM (
+		SELECT *
+		FROM refund
+		ORDER BY refund_date DESC) A
+		)
+		WHERE RN BETWEEN #{start} AND #{end}
+	</select>
+
+	<update id="refundStatus" parameterType="Hashmap">
+		<if test="status == '반품신청'">
+			UPDATE refund SET refund_status = '처리중' WHERE orders_no =
+			#{orderNo} AND product_no = #{productNo}
+		</if>
+		<if test="status == '처리중'">
+			UPDATE refund SET refund_status = '반품완료' WHERE orders_no =
+			#{orderNo} AND product_no = #{productNo}
+		</if>
+	</update>
+</mapper>

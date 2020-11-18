@@ -1,0 +1,131 @@
+*{
+  margin: 0px;
+  padding: 0px;
+  text-decoration: none;
+  font-family:sans-serif;
+}
+
+body {
+  background-color: #FFFFFF;
+}
+
+.loginForm {
+  width:300px;
+  height:500px;
+  margin:0 auto;
+}
+
+.signuplistForm {
+  width:490px;
+  height:560px;
+  margin:0 auto;
+}
+
+.loginForm h2{
+  text-align: center;
+  margin: 30px;
+}
+
+.idForm{
+  border-bottom: 2px solid #adadad;
+  margin: 30px;
+  padding: 10px 10px;
+}
+
+.passForm{
+  border-bottom: 2px solid #adadad;
+  margin: 30px;
+  padding: 10px 10px;
+}
+
+.id {
+  width: 100%;
+  border:none;
+  outline:none;
+  color: #636e72;
+  font-size:16px;
+  height:25px;
+  background: none;
+}
+
+.pw {
+  width: 100%;
+  border:none;
+  outline:none;
+  color: #636e72;
+  font-size:16px;
+  height:25px;
+  background: none;
+}
+
+.btn {
+  position:relative;
+  left:40%;
+  transform: translateX(-50%);
+  margin-bottom: 40px;
+  width:80%;
+  height:40px;
+  background: linear-gradient(125deg,#81ecec,#6c5ce7,#81ecec);
+  background-position: left;
+  background-size: 200%;
+  color:white;
+  font-weight: bold;
+  border:none;
+  cursor:pointer;
+  transition: 0.4s;
+  display:inline;
+}
+
+.btn:hover {
+  background-position: right;
+}
+
+.bottomText {
+  text-align: center;
+}
+
+.lgimg{
+   margin: 10px;
+}
+
+.sun {
+	width: 473px;
+    display: block;
+    unicode-bidi: isolate;
+    margin-block-start: 0.5em;
+    margin-block-end: 0.5em;
+    margin-inline-start: auto;
+    margin-inline-end: auto;
+    margin: 3px;
+    padding: 5px;
+    overflow: hidden;
+    border-width: 1px;
+}
+
+.sun2 {
+	width:473px;
+    display: block;
+    unicode-bidi: isolate;
+    margin-block-start: 0.5em;
+    margin-block-end: 0.5em;
+    margin-inline-start: auto;
+    margin-inline-end: auto;
+    margin: 3px;
+    padding: 5px;
+    overflow: hidden;
+    border-width: 1px;
+    border-top: 1px solid #FFFFFF;
+}
+.chk_non{
+	display: block;
+    min-height: 17px;
+    margin: 10px 0 0 0;
+    padding: 5px 0 5px 19px;
+    color: #339933;
+    font-weight: normal;
+}
+.psignuplist{
+	padding:25px;
+	align:center;
+	margin: -10px 120px 10px;
+}

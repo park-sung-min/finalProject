@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org/DTD Config 3.0//EN"
+   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+   
+<mapper namespace="mypageMapper">
+
+<!-- 주문목록 전체보기 resultMap 설정  -->
+<resultMap id="OrderList" type="Orders">
+   <id property="id" column="id"/>
+   <result property="ordersDate" column="orders_date"/>
+   <result property="ordersNo" column="orders_no"/>
+   <result property="ordersStatus" column="orders_status"/>
+   
+   <association property="product" javaType="Product">
+	<id property="productNo" column="product_no"/>
+	<result property="productName" column="product_name"/>
+	<result property="productPrice" column="product_price"/>
+   </association>
+   <association property="ordersDetail" javaType="OrdersDetail">
+   <id property="ordersNo" column="orders_no"/>
+   <result property="detailQty" column="detail_qty"/>
+   </association>   
+</resultMap>
+
+
+<!-- 주문목록에서 각상품 상세보기 페이지 설정 -->
+<resultMap type="Orders" id="ordersDetailList">
+	<id property="ordersNo" column="orders_no"/>
+	<result property="ordersTotal" column="orders_total"/>
+	<result property="ordersStatus" column="orders_status"/>
+	<result property="discountCoupon" column="discount_coupon"/>
+	<result property="discountPoint" column="discount_point"/>
+
+	<association property="ordersDetail" javaType="OrdersDetail">
+	<id property="ordersNo" column="orders_no"/>
+	<id property="productNo" column="product_no"/>
+	<result property="detailQty" column="detail_qty"/>	
+	<result property="reviewCheck" column="review_check"/>
+	<result property="detailRefund" column="detail_refund"/>	
+	</association>
+
+	<association property="product" javaType="Product">
+	<id property="productNo" column="product_no"/>
+	<result property="productName" column="product_name"/>
+	<result property="productImage" column="product_image"/>	
+	<result property="productPrice" column="product_price"/>
+	<result property="productAmount" column="product_amount"/>
+	</association>
+</resultMap>
+
+
+<!-- 취소/반품신청가능 목록용 resultMap 설정  -->
+<resultMap id="cancelRequire" type="Orders">
+   <id property="id" column="id"/>
+   <result property="ordersNo" column="orders_no"/>
+   <result property="discountCoupon" column="discount_coupon"/>
+   <result property="discountPoint" column="discount_point"/>
+   
+   <association property="ordersDetail" javaType="OrdersDetail">
+   <id property="ordersNo" column="orders_no"/>
+   <result property="detailQty" column="detail_qty"/>
+   <result property="productNo" column="product_no"/>
+   </association>   
+   
+   <association property="product" javaType="Product">
+   <id property="productNo" column="product_no"/>
+   <result property="productName" column="product_name"/>
+   <result property="productPrice" column="product_price"/>
+   <result property="productImage" column="product_image"/>
+   </association>
+</resultMap>
+
+
+<!-- 위시리스트 데이터 불러오는 resultMap 설정  -->
+<resultMap type="wishlist" id="myWishlist">
+	<id property="productNo" column="product_no"/>
+	<result property="id" column="id"/>
+
+	<association property="product" javaType="Product">
+	<id property="productNo" column="product_no"/>
+ 	<result property="productName" column="product_name"/>
+ 	<result property="productDetail" column="product_detail"/>
+    <result property="productPrice" column="product_price"/>
+    <result property="productImage" column="product_image"/>
+    <result property="productAmount" column="product_amount"/>
+	</association>
+</resultMap>
+
+
+<!-- 쿠폰목록 데이터 불러오는 resultMap 설정 -->
+<resultMap type="Ucoupon" id="Coupon">
+	<id property="ucouponNo" column="ucoupon_no"/>
+	<result property="id" column="id"/>
+	<result property="couponUsed" column="ucoupon_used"/>
+	<result property="couponNo" column="coupon_no"/>
+	
+	<association property="coupon" javaType="Coupon">
+	<id property="couponNo" column="coupon_no"/>
+	<result property="couponTitle" column="coupon_title"/>
+	<result property="couponDiscount" column="coupon_discount"/>
+	<result property="couponSdate" column="coupon_sdate"/>
+	<result property="couponEdate" column="coupon_edate"/>
+	</association>
+</resultMap>
+
+
+<!-- 환불목록 데이터 불러오는 resultMap 설정 -->
+<resultMap type="Refund" id="refundList">
+	<id property="ordersNo" column="orders_no"/>
+	<id property="productNo" column="product_no"/>
+	<result property="id" column="id"/>
+	<result property="refundQty" column="refund_qty"/>
+	<result property="refundDate" column="refund_date"/>
+	<result property="refundStatus" column="refund_status"/>
+	<result property="refundReason" column="refund_reason"/>
+	
+	<association property="product" javaType="Product">
+	<id property="productNo" column="product_no"/>
+ 	<result property="productName" column="product_name"/>
+	</association>
+</resultMap>
+
+   <select id="OrderList" parameterType="String" resultMap="OrderList">
+   select 
+   	o.orders_date,
+    o.orders_no,
+    o.orders_status,
+    od.detail_qty,
+    p.product_name
+   FROM
+    Orders o, orders_Detail od, product p
+   where 
+    o.orders_no = od.orders_no and
+    od.product_no = p.product_no
+    and o.id = #{id}
+   order by
+    o.orders_date desc 
+   </select>
+   
+   <!-- 페이징용 count -->
+   	<select id="countUserOrder" parameterType="String" resultType="int">
+		SELECT count(*) from orders
+		WHERE id = #{id}
+	</select>
+	
+	<!-- 페이징용 count 날짜입력시 -->
+   	<select id="countUserOrderDate" resultType="int">
+		SELECT count(*) from orders
+		WHERE id = #{id} and
+		to_char(orders_date, 'yyyy-mm-dd') between #{fromDate} and #{toDate}
+	</select>
+   
+   <!-- 반품절차(cancelRequire)시 필요, 근학쓰랑합칠것 -->
+   <select id="orderPerProduct">
+   	select count(product_no) from orders_detail
+   	where orders_no = #{ordersNo}
+   </select>
+   
+   
+   	<!-- 주문목록 확인하기  -->
+   <select id="myOrderList" resultType="Orders">
+   select 
+   	orders_date as ordersDate,
+    orders_no as ordersNo,
+    orders_status as ordersStatus,
+    orders_total as ordersTotal
+   FROM (
+	SELECT ROWNUM RN, A.*
+	FROM (
+	SELECT *
+	FROM orders
+	ORDER BY orders_no DESC) A)
+   where 
+    id = #{id} and orders_status != '반품' and
+    RN BETWEEN #{start} AND #{end}
+   </select>
+   
+   
+   <!-- 상세주문목록 확인하기(상품별) -->
+   <select id="ordersDetail" parameterType="int" resultMap="ordersDetailList">
+   select
+     p.product_no,
+     p.product_name, 
+     p.product_image, 
+     p.product_price, 
+     od.DETAIL_QTY,
+     od.review_check,
+     od.detail_refund,
+     o.orders_total,
+     o.orders_status,
+     o.discount_coupon,
+     o.discount_point
+   from
+    product p, orders_detail od, orders o
+   where
+    p.product_no = od.product_no and o.orders_no = #{ordersNo} and o.orders_no = od.orders_no 
+   </select>
+   
+   <!-- 날짜따른 주문목록 확인하기 -->
+   <select id="ordersDaySearch" parameterType="HashMap" resultType="Orders">
+   select 
+   	orders_date ordersDate,
+    orders_no as ordersNo,
+    orders_status as ordersStatus,
+    orders_total as ordersTotal
+   FROM
+    Orders
+   where 
+    id = #{id} and
+    orders_status != '반품' and
+    to_char(orders_date, 'yyyy-mm-dd') between #{fromDate} and #{toDate}
+   order by
+    orders_date desc
+   </select>
+   
+   
+   	<!-- 쿠폰목록 확인하기  -->
+   <select id="coupon" parameterType="String" resultMap="Coupon">
+   select
+    uc.ucoupon_no,
+    uc.id,
+    uc.ucoupon_used,
+    c.coupon_discount,
+    c.coupon_sdate, 
+    c.coupon_edate, 
+    c.coupon_title
+   FROM coupon c, ucoupon uc
+   where uc.id = #{id} and
+   uc.coupon_no = c.coupon_no 
+   order by c.coupon_edate desc 
+   </select>
+   
+   <!-- 날짜따른 쿠폰목록 확인하기  -->
+   <select id="couponDaySearch" parameterType="HashMap" resultMap="Coupon">
+   select
+    uc.ucoupon_no,
+    uc.id,
+    uc.ucoupon_used, 
+    c.coupon_discount,
+    c.coupon_sdate,
+    c.coupon_edate,
+    c.coupon_title
+   FROM coupon c, ucoupon uc
+   where id = #{id} and
+   uc.coupon_no = c.coupon_no and
+   c.coupon_sdate >= #{fromDate} and
+   c.coupon_edate <![CDATA[ < ]]>= #{toDate}
+   order by c.coupon_edate desc 
+   </select>
+   
+   
+   	<!-- 사용가능 쿠폰수 count -->
+   <select id="couponCount" parameterType="String" resultType="int">
+   select count(ucoupon_no)
+   FROM ucoupon
+   where id = #{id} and ucoupon_used = 0
+   </select>  
+   	<!-- 사용가능 포인트 count  -->
+   <select id="myPoint" parameterType="String" resultType="int">
+   select point FROM member where id = #{id}
+   </select>
+   
+   
+   <!-- 추가하려는 상품이 wishlist에 있는지 확인용 -->
+   <select id="wishlistCheck" parameterType="HashMap" resultType="Wishlist">
+   SELECT
+    id,
+    product_no as productNo
+   FROM
+    wishlist where id = #{id} and product_no = #{productNo}
+   </select>
+   
+   
+   <!-- wishlist 추가하기 -->
+   <select id="wishlistInput">
+   Insert into WISHLIST(id, product_no)
+   	VALUES (#{id}, #{productNo})
+   </select>
+   
+     
+   <!-- wishlist 목록 출력 -->
+   <select id="wishlist" parameterType="String" resultMap="myWishlist">
+   SELECT
+   	w.id,
+   	p.product_no,
+   	p.product_name,
+   	p.product_detail,
+   	p.product_price,
+   	p.product_image,
+   	p.product_amount
+   FROM
+   	wishlist w, product p
+   WHERE
+   	w.id = #{id} and w.product_no = p.product_no
+   </select>
+   
+   
+   <!-- wishlist 삭제 -->
+   <select id="wishlistDelete">
+   DELETE FROM wishlist
+   where product_no = #{productNo}
+   </select>
+   
+   
+   <!-- 1) 취소/반품가능 목록 확인하기  -->
+   <select id="cancelRequire" parameterType="HashMap" resultMap="cancelRequire">
+   select  
+   	o.orders_no,
+   	o.discount_coupon,
+   	o.discount_point,
+   	od.detail_qty,
+    p.product_name,
+    p.product_price,
+    p.product_image
+   FROM 
+   	Orders o, orders_Detail od, product p
+   where
+    p.product_no = #{productNo} and
+    o.orders_no = #{ordersNo} and
+    o.orders_no = od.orders_no and
+   	od.product_no = p.product_no
+   </select>
+   
+   <!-- 반품내역 확인하기 -->
+   <select id="refund" parameterType="String" resultMap="refundList">
+   SELECT
+    r.id, r.orders_no, r.product_no, r.refund_qty, r.refund_date, r.refund_status,
+    p.product_name
+   FROM
+    refund r, product p
+   WHERE
+    r.id = #{id} and
+    r.product_no = p.product_no  
+   </select>
+   
+   
+   <!-- 날짜따른 반품내역 확인하기 -->
+   <select id="refundDaySearch" parameterType="HashMap" resultMap="refundList">
+   SELECT
+    r.id, r.orders_no, r.product_no, r.refund_qty, r.refund_date, r.refund_status,
+    p.product_name
+   FROM
+    refund r, product p
+   WHERE
+    r.id = #{id} and
+    r.product_no = p.product_no and
+    to_char(r.refund_date, 'yyyy-mm-dd') between #{fromDate} and #{toDate} 
+   </select>
+
+	<insert id="writeReview" parameterType="Review">
+		<if test="reviewImage != null">
+		INSERT INTO review(review_no, product_no, id, review_content, review_image, review_date, review_score) VALUES (REVIEWSEQ.nextval, #{productNo}, #{id}, #{reviewContent}, #{reviewImage}, sysdate, #{reviewScore})
+		</if>
+		<if test="reviewImage == null">
+		INSERT INTO review(review_no, product_no, id, review_content, review_date, review_score) VALUES (REVIEWSEQ.nextval, #{productNo}, #{id}, #{reviewContent}, sysdate, #{reviewScore})
+		</if>
+	</insert>
+	
+	
+	<!-- ADMIN -->
+	<select id="getOrder" parameterType="int" resultMap="OrderList">
+	   SELECT o.orders_date, o.orders_no, o.orders_status, od.detail_qty, p.product_no, p.product_name, p.product_price
+	   		FROM Orders o, orders_Detail od, product p
+	   		WHERE o.orders_no = od.orders_no and od.product_no = p.product_no and o.orders_no = #{orderNo}
+	   		ORDER BY o.orders_date desc 
+   	</select>
+</mapper>
+   
